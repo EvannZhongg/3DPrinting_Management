@@ -10,7 +10,7 @@ class App(ttk.Window):
     def __init__(self):
         super().__init__(themename="minty")
         self.title("3D打印耗材管理系统 v3.0")
-        self.geometry("1380x780")
+        self.geometry("1780x780")
 
         # 初始化数据管理
         self.filament_manager = FilamentManager()
@@ -323,37 +323,38 @@ class App(ttk.Window):
     def show_add_model(self):
         """显示添加模型对话框（支持多耗材）"""
         dialog = ttk.Toplevel(title="添加模型")
-        dialog.geometry("600x400")
+        dialog.geometry("600x450")  # Adjusted size for better layout
 
-        # 耗材输入表格
-        columns = [("filament", "耗材名称", 150), ("weight", "单件重量(g)", 100)]
-        tree = ttk.Treeview(dialog, columns=[c[0] for c in columns], show="headings", height=4)
-        for col_id, text, width in columns:
-            tree.heading(col_id, text=text)
-            tree.column(col_id, width=width, anchor=CENTER)
-        tree.pack(pady=5, fill=X)
+        # 用于添加耗材行的区域 (将添加的耗材行放在这里)
+        material_frame = ttk.Frame(dialog)
+        material_frame.pack(fill=X, pady=10)
 
-        # 添加耗材行
-        def add_material():
-            row_frame = ttk.Frame(dialog)
+        # 初始的“添加耗材”行按钮
+        def add_material_row():
+            """添加耗材行（将输入框放在顶部）"""
+            row_frame = ttk.Frame(material_frame)
             row_frame.pack(fill=X, pady=2)
 
+            # 耗材选择框
             filament_combo = ttk.Combobox(row_frame, values=[f.name for f in self.filament_manager.filaments])
             filament_combo.pack(side=LEFT, padx=2, fill=X, expand=True)
 
+            # 重量输入框
             weight_entry = ttk.Entry(row_frame)
             weight_entry.pack(side=LEFT, padx=2, fill=X, expand=True)
 
+            # 删除按钮
             ttk.Button(row_frame, text="×", command=lambda: row_frame.destroy(),
                        bootstyle=DANGER, width=2).pack(side=LEFT)
 
-            materials.append((filament_combo, weight_entry))
+        # 默认添加一个耗材行
+        add_material_row()
 
-        materials = []  # 存储所有输入行
-        ttk.Button(dialog, text="+ 添加耗材", command=add_material,
-                   bootstyle=SECONDARY).pack(anchor=W)
+        # 添加耗材按钮，点击时会增加新的输入框
+        ttk.Button(dialog, text="+ 添加耗材", command=add_material_row,
+                   bootstyle=SECONDARY).pack(anchor=W, pady=5)
 
-        # 其他字段
+        # 模型基本信息部分
         main_frame = ttk.Frame(dialog)
         main_frame.pack(fill=X, pady=5)
         ttk.Label(main_frame, text="模型名称:").pack(side=LEFT)
@@ -366,13 +367,18 @@ class App(ttk.Window):
 
         def on_submit():
             try:
-                # 收集耗材数据
+                # 收集所有耗材数据
                 material_list = []
-                for combo, entry in materials:
+                for row in material_frame.winfo_children():
+                    # 获取每一行的耗材和重量
+                    combo = row.winfo_children()[0]  # Combobox for filament
+                    entry = row.winfo_children()[1]  # Entry for weight
                     filament_name = combo.get()
                     weight = float(entry.get())
+
                     if not filament_name or weight <= 0:
                         raise ValueError("耗材信息不完整")
+
                     material_list.append({
                         "filament": filament_name,
                         "weight": round(weight, 2)
