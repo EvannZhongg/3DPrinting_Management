@@ -197,12 +197,12 @@ class App(ttk.Window):
     def show_add_filament(self):
         """显示添加耗材对话框"""
         dialog = ttk.Toplevel(title="添加耗材")
-        dialog.geometry("320x280")
+        dialog.geometry("320x350")
 
         # 输入字段
         fields = [
             ("名称:", ttk.Entry(dialog)),
-            ("种类:", ttk.Combobox(dialog, values=["PLA", "ABS", "PETG", "TPU", "其他"])),
+            ("种类:", ttk.Combobox(dialog, values=["PLA", "ABS", "PETG", "TPU", "ASA", "PC", "尼龙", "其他"])),
             ("总价(元):", ttk.Entry(dialog)),
             ("总量(g):", ttk.Entry(dialog))
         ]
@@ -244,7 +244,7 @@ class App(ttk.Window):
             return
 
         dialog = ttk.Toplevel(title=f"编辑耗材 - {name}")
-        dialog.geometry("360x360")
+        dialog.geometry("360x450")
 
         # 创建带初始值的变量
         name_var = ttk.StringVar(value=filament.name)
@@ -325,7 +325,7 @@ class App(ttk.Window):
     def show_add_model(self):
         """显示添加模型对话框（支持多耗材）"""
         dialog = ttk.Toplevel(title="添加模型")
-        dialog.geometry("600x450")  # Adjusted size for better layout
+        dialog.geometry("600x300")  # Adjusted size for better layout
 
         # 用于添加耗材行的区域 (将添加的耗材行放在这里)
         material_frame = ttk.Frame(dialog)
@@ -507,7 +507,7 @@ class App(ttk.Window):
             return
 
         dialog = ttk.Toplevel(title=f"编辑模型 - {model_name}")
-        dialog.geometry("600x450")  # Adjusted size for better layout
+        dialog.geometry("600x300")  # Adjusted size for better layout
 
         # 用于添加耗材行的区域 (将添加的耗材行放在这里)
         material_frame = ttk.Frame(dialog)
