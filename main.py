@@ -98,8 +98,8 @@ class App(ttk.Window):
             height=8
         )
         columns = [
-            ("#0", "耗材名称", 150, W),
-            ("category", "种类", 100, W),
+            ("#0", "耗材名称", 190, W),
+            ("category", "种类", 80, W),
             ("total_price", "总价(元)", 100, CENTER),
             ("price_per_g", "单价(元/克)", 120, CENTER),
             ("initial", "总量(g)", 90, CENTER),
@@ -140,6 +140,42 @@ class App(ttk.Window):
             self.history_tree.heading(col_id, text=text)
             self.history_tree.column(col_id, width=width)
         self.history_tree.pack(fill=BOTH, expand=True)
+
+        def on_right_click(event):
+            """Handler for right-click events on the history tree."""
+            item = self.history_tree.identify('item', event.x, event.y)
+            if not item:  # If no item is selected
+                return
+            self.history_tree.selection_set(item)  # Set the selected item
+
+            # Show the right-click menu
+            self.history_menu.post(event.x_root, event.y_root)
+
+        def delete_history_entry():
+            """Delete the selected print history entry."""
+            selected = self.history_tree.selection()
+            if not selected:
+                return
+            # Get the selected item's values
+            model_name = self.history_tree.item(selected[0], "values")[0]
+            timestamp = self.history_tree.item(selected[0], "values")[2]
+
+            # Remove the entry from the history
+            self.print_history_manager.history = [
+                entry for entry in self.print_history_manager.history
+                if not (entry.model_name == model_name and entry.timestamp.strftime("%Y-%m-%d %H:%M:%S") == timestamp)
+            ]
+            self.print_history_manager.save_data()
+
+            # Refresh the history display
+            self.refresh_print_history()
+
+        # Create the context menu for deleting history entry
+        self.history_menu = ttk.Menu(self, tearoff=0)
+        self.history_menu.add_command(label="删除记录", command=delete_history_entry)
+
+        # Bind the right-click event to the treeview
+        self.history_tree.bind("<Button-3>", on_right_click)
 
         # ================= 右侧模型管理面板 =================
         right_frame = ttk.Labelframe(self, text=" 模型管理 ", bootstyle=WARNING)
