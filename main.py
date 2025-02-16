@@ -10,7 +10,7 @@ class App(ttk.Window):
     def __init__(self):
         super().__init__(themename="minty")
         self.title("3D打印耗材管理系统 v3.0")
-        self.geometry("1780x780")
+        self.geometry("1500x780")
 
         # 初始化数据管理
         self.filament_manager = FilamentManager()
@@ -98,9 +98,9 @@ class App(ttk.Window):
 
         # 配置列（新增unit列）
         columns = [
-            ("#0", "模型名称", 280, W),
-            ("materials", "使用耗材", 220, W),
-            ("quantity", "数量", 100, CENTER),
+            ("#0", "模型名称", 250, W),
+            ("materials", "使用耗材", 150, W),
+            ("quantity", "数量", 50, CENTER),
             ("total", "总成本(元)", 120, CENTER),
             ("unit", "单价(元)", 120, CENTER)
         ]
@@ -136,7 +136,7 @@ class App(ttk.Window):
         for m in self.model_manager.models:
             try:
                 total_weight = 0  # 初始化总重量
-                total_unit_cost = 0  # 初始化总单价
+                total_cost = 0  # 初始化总成本
 
                 # 插入父项（模型基本信息）
                 parent = self.model_tree.insert(
@@ -156,8 +156,9 @@ class App(ttk.Window):
                     filament = self.filament_manager.find_filament(mat["filament"])
                     if filament:
                         material_cost = filament.price * mat["weight"]  # 单个耗材的成本
+                        material_unit_cost = material_cost / m.quantity  # 计算子项单价
                         total_weight += mat["weight"]  # 累加耗材重量
-                        total_unit_cost += material_cost / m.quantity  # 累加每个模型单位的耗材成本
+                        total_cost += material_cost  # 累加总成本
 
                         self.model_tree.insert(
                             parent, END,
@@ -166,17 +167,18 @@ class App(ttk.Window):
                                 f"{mat['weight']}g",  # 显示耗材重量
                                 1,  # 单耗材数量固定为1
                                 f"{material_cost:.2f}",  # 显示单个耗材成本
-                                f"{filament.price:.2f}"  # 显示单价
+                                f"{material_unit_cost:.2f}"  # 显示子项的单价（总价/数量）
                             ),
                             tags=("child",)  # 添加标签用于样式控制
                         )
 
                 # 更新父项（模型）中的"使用耗材"和"单价"信息
+                parent_unit_cost = total_cost / m.quantity  # 计算父项的单价（总价/数量）
                 self.model_tree.item(parent, values=(
                     f"{total_weight:.2f}g",  # 显示所有耗材的总重量
                     m.quantity,
-                    f"{total_unit_cost * m.quantity:.2f}",  # 更新总成本
-                    f"{total_unit_cost:.2f}"  # 更新总单价（所有子项单价的总和）
+                    f"{total_cost:.2f}",  # 更新总成本
+                    f"{parent_unit_cost:.2f}"  # 更新父项的单价（总成本/数量）
                 ))
 
             except Exception as e:
@@ -398,34 +400,34 @@ class App(ttk.Window):
 
         ttk.Button(dialog, text="提交", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
 
-    def batch_calculate(self):
-        """批量计算选中模型"""
-        selected = self.model_tree.selection()
-        if not selected:
-            messagebox.showwarning("提示", "请先选择要计算的模型")
-            return
-
-        total_cost = 0
-        details = []
-
-        for item in selected:
-            model_name = self.model_tree.item(item, "text")
-            model = self.model_manager.find_model(model_name)
-
-            for material in model.materials:
-                filament = self.filament_manager.find_filament(material["filament"])
-                if not filament:
-                    continue
-
-                cost = filament.price * material["weight"] * model.quantity
-                total_cost += cost
-                details.append(
-                    f"{model.name}: {material['filament']} "
-                    f"{material['weight']}g × {model.quantity}个 = {cost:.2f}元"
-                )
-
-        report = "\n".join(details) + f"\n\n总计成本: {total_cost:.2f}元"
-        messagebox.showinfo("批量计算结果", report)
+    # def batch_calculate(self):
+    #     """批量计算选中模型"""
+    #     selected = self.model_tree.selection()
+    #     if not selected:
+    #         messagebox.showwarning("提示", "请先选择要计算的模型")
+    #         return
+    #
+    #     total_cost = 0
+    #     details = []
+    #
+    #     for item in selected:
+    #         model_name = self.model_tree.item(item, "text")
+    #         model = self.model_manager.find_model(model_name)
+    #
+    #         for material in model.materials:
+    #             filament = self.filament_manager.find_filament(material["filament"])
+    #             if not filament:
+    #                 continue
+    #
+    #             cost = filament.price * material["weight"] * model.quantity
+    #             total_cost += cost
+    #             details.append(
+    #                 f"{model.name}: {material['filament']} "
+    #                 f"{material['weight']}g × {model.quantity}个 = {cost:.2f}元"
+    #             )
+    #
+    #     report = "\n".join(details) + f"\n\n总计成本: {total_cost:.2f}元"
+    #     messagebox.showinfo("批量计算结果", report)
     # ------------------ 操作功能 ------------------
     def delete_filament(self):
         """删除选中耗材"""
@@ -492,51 +494,38 @@ class App(ttk.Window):
 
     def show_edit_model(self):
         """显示编辑模型对话框"""
-        if not (selected := self.model_tree.selection()):
+        selected = self.model_tree.selection()  # Get the selected item
+        if not selected:  # Check if a model is selected
             messagebox.showwarning("提示", "请先选择要编辑的模型！")
             return
 
         model_name = self.model_tree.item(selected[0], "text")
-        model = self.model_manager.find_model(model_name)
+        model = self.model_manager.find_model(model_name)  # Find the model using the name
+
+        if not model:  # Check if the model was found
+            messagebox.showerror("错误", "所选模型不存在！")
+            return
 
         dialog = ttk.Toplevel(title=f"编辑模型 - {model_name}")
-        dialog.geometry("600x450")
+        dialog.geometry("600x450")  # Adjusted size for better layout
 
-        # 模型基本信息
-        main_frame = ttk.Frame(dialog)
-        main_frame.pack(fill=X, pady=5)
-        ttk.Label(main_frame, text="模型名称:").pack(side=LEFT)
-        name_entry = ttk.Entry(main_frame)
-        name_entry.insert(0, model.name)
-        name_entry.pack(side=LEFT, fill=X, expand=True)
+        # 用于添加耗材行的区域 (将添加的耗材行放在这里)
+        material_frame = ttk.Frame(dialog)
+        material_frame.pack(fill=X, pady=10)
 
-        ttk.Label(main_frame, text="单盘数量:").pack(side=LEFT, padx=10)
-        quantity_entry = ttk.Entry(main_frame, width=8)
-        quantity_entry.insert(0, str(model.quantity))
-        quantity_entry.pack(side=LEFT)
-
-        # 耗材编辑表格
-        columns = [("filament", "耗材名称", 150), ("weight", "单件重量(g)", 100)]
-        tree = ttk.Treeview(dialog, columns=[c[0] for c in columns], show="headings", height=4)
-        for col_id, text, width in columns:
-            tree.heading(col_id, text=text)
-            tree.column(col_id, width=width, anchor=CENTER)
-        tree.pack(pady=5, fill=X)
-
-        materials = []  # 存储所有输入行
-
+        # 添加默认的耗材行
         def add_material_row(mat_data=None):
-            """添加耗材行（带初始数据）"""
-            row_frame = ttk.Frame(dialog)
+            """添加耗材行（将输入框放在顶部）"""
+            row_frame = ttk.Frame(material_frame)
             row_frame.pack(fill=X, pady=2)
 
-            # 耗材选择
+            # 耗材选择框
             filament_combo = ttk.Combobox(row_frame, values=[f.name for f in self.filament_manager.filaments])
             filament_combo.pack(side=LEFT, padx=2, fill=X, expand=True)
             if mat_data:
                 filament_combo.set(mat_data["filament"])
 
-            # 重量输入
+            # 重量输入框
             weight_entry = ttk.Entry(row_frame)
             weight_entry.pack(side=LEFT, padx=2, fill=X, expand=True)
             if mat_data:
@@ -546,25 +535,41 @@ class App(ttk.Window):
             ttk.Button(row_frame, text="×", command=lambda: row_frame.destroy(),
                        bootstyle=DANGER, width=2).pack(side=LEFT)
 
-            materials.append((filament_combo, weight_entry))
-
         # 加载现有耗材数据
         for mat in model.materials:
             add_material_row(mat)
 
-        # 添加耗材按钮
+        # 添加耗材按钮，点击时会增加新的输入框
         ttk.Button(dialog, text="+ 添加耗材", command=lambda: add_material_row(),
-                   bootstyle=SECONDARY).pack(anchor=W)
+                   bootstyle=SECONDARY).pack(anchor=W, pady=5)
+
+        # 模型基本信息部分（放置在耗材选择部分下面）
+        main_frame = ttk.Frame(dialog)
+        main_frame.pack(fill=X, pady=5)
+        ttk.Label(main_frame, text="模型名称:").pack(side=LEFT)
+        name_entry = ttk.Entry(main_frame)
+        name_entry.insert(0, model.name)  # Set the model's name in the entry field
+        name_entry.pack(side=LEFT, fill=X, expand=True)
+
+        ttk.Label(main_frame, text="单盘数量:").pack(side=LEFT, padx=10)
+        quantity_entry = ttk.Entry(main_frame, width=8)
+        quantity_entry.insert(0, str(model.quantity))  # Set the model's quantity in the entry field
+        quantity_entry.pack(side=LEFT)
 
         def on_submit():
             try:
-                # 收集耗材数据
+                # 收集所有耗材数据
                 material_list = []
-                for combo, entry in materials:
+                for row in material_frame.winfo_children():
+                    # 获取每一行的耗材和重量
+                    combo = row.winfo_children()[0]  # Combobox for filament
+                    entry = row.winfo_children()[1]  # Entry for weight
                     filament_name = combo.get()
                     weight = float(entry.get())
+
                     if not filament_name or weight <= 0:
                         raise ValueError("耗材信息不完整")
+
                     material_list.append({
                         "filament": filament_name,
                         "weight": round(weight, 2)
@@ -583,6 +588,7 @@ class App(ttk.Window):
                 messagebox.showerror("错误", f"输入无效: {str(e)}")
 
         ttk.Button(dialog, text="保存修改", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
+
 
 if __name__ == "__main__":
     app = App()
