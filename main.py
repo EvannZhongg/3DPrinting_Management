@@ -1,10 +1,53 @@
 import json
 from tkinter import messagebox
+from datetime import datetime
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from filament import Filament, FilamentManager
 from model import Model, ModelManager
 
+class PrintHistoryEntry:
+    def __init__(self, model_name, used_materials, timestamp):
+        self.model_name = model_name
+        self.used_materials = used_materials  # 列表，包含耗材名称和用量
+        self.timestamp = timestamp
+
+    def to_dict(self):
+        return {
+            "model_name": self.model_name,
+            "used_materials": self.used_materials,
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data["model_name"],
+            data["used_materials"],
+            datetime.strptime(data["timestamp"], "%Y-%m-%d %H:%M:%S")
+        )
+
+class PrintHistoryManager:
+    def __init__(self, filename: str = "print_history.json"):
+        self.filename = filename
+        self.history = []
+        self.load_data()
+
+    def add_entry(self, entry: PrintHistoryEntry):
+        self.history.append(entry)
+        self.save_data()
+
+    def save_data(self):
+        with open(self.filename, 'w') as f:
+            json.dump([entry.to_dict() for entry in self.history], f, indent=4)
+
+    def load_data(self):
+        try:
+            with open(self.filename, 'r') as f:
+                data = json.load(f)
+                self.history = [PrintHistoryEntry.from_dict(item) for item in data]
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.history = []
 
 class App(ttk.Window):
     def __init__(self):
@@ -15,13 +58,15 @@ class App(ttk.Window):
         # 初始化数据管理
         self.filament_manager = FilamentManager()
         self.model_manager = ModelManager()
+        self.print_history_manager = PrintHistoryManager()
 
         # 创建界面组件
         self.create_widgets()
 
-        # 将刷新操作放在组件创建之后
+        # 初始化数据刷新
         self.refresh_filaments()
         self.refresh_models()
+        self.refresh_print_history()
 
     def refresh_filaments(self):
         """刷新耗材列表"""
@@ -37,33 +82,36 @@ class App(ttk.Window):
 
     def create_widgets(self):
         """创建主界面布局"""
-        # ================= 左侧耗材管理面板 =================
-        left_frame = ttk.Labelframe(self, text=" 耗材管理 ", bootstyle=INFO)
-        left_frame.pack(side=LEFT, fill=Y, padx=10, pady=10)
+        # ================= 左侧容器（耗材管理 + 打印历史）=================
+        left_container = ttk.Frame(self)
+        left_container.pack(side=LEFT, fill=Y, padx=10, pady=10)
 
-        # 耗材列表（保持不变）
+        # 耗材管理面板
+        filament_frame = ttk.Labelframe(left_container, text=" 耗材管理 ", bootstyle=INFO)
+        filament_frame.pack(side=TOP, fill=BOTH, expand=True)
+
+        # 耗材树形列表
         self.filament_tree = ttk.Treeview(
-            left_frame,
+            filament_frame,
             columns=("category", "total_price", "price_per_g", "initial", "remaining"),
             show="tree headings",
-            height=15
+            height=8
         )
-        # 配置列（保持不变）
         columns = [
-            ("#0", "耗材名称", 200, W),
-            ("category", "种类", 120, W),
+            ("#0", "耗材名称", 150, W),
+            ("category", "种类", 100, W),
             ("total_price", "总价(元)", 100, CENTER),
             ("price_per_g", "单价(元/克)", 120, CENTER),
-            ("initial", "总量(g)", 100, CENTER),
-            ("remaining", "剩余(g)", 100, CENTER)
+            ("initial", "总量(g)", 90, CENTER),
+            ("remaining", "剩余(g)", 90, CENTER)
         ]
         for col_id, text, width, anchor in columns:
             self.filament_tree.heading(col_id, text=text, anchor=anchor)
             self.filament_tree.column(col_id, width=width, anchor=anchor)
-        self.filament_tree.pack(fill=X)
+        self.filament_tree.pack(fill=BOTH, expand=True)
 
-        # 操作按钮（保持不变）
-        btn_frame = ttk.Frame(left_frame)
+        # 耗材操作按钮
+        btn_frame = ttk.Frame(filament_frame)
         btn_frame.pack(fill=X, pady=5)
         ttk.Button(btn_frame, text="添加耗材", command=self.show_add_filament,
                    bootstyle=SUCCESS).pack(side=LEFT, expand=True, padx=2)
@@ -72,11 +120,32 @@ class App(ttk.Window):
         ttk.Button(btn_frame, text="删除耗材", command=self.delete_filament,
                    bootstyle=DANGER).pack(side=LEFT, expand=True, padx=2)
 
+        # 打印历史面板
+        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=INFO)
+        history_frame.pack(side=TOP, fill=BOTH, expand=True)
+
+        # 历史记录列表
+        self.history_tree = ttk.Treeview(
+            history_frame,
+            columns=("model", "materials", "time"),
+            show="headings",
+            height=10
+        )
+        history_columns = [
+            ("model", "模型名称", 150),
+            ("materials", "使用耗材", 250),
+            ("time", "时间", 150)
+        ]
+        for col_id, text, width in history_columns:
+            self.history_tree.heading(col_id, text=text)
+            self.history_tree.column(col_id, width=width)
+        self.history_tree.pack(fill=BOTH, expand=True)
+
         # ================= 右侧模型管理面板 =================
         right_frame = ttk.Labelframe(self, text=" 模型管理 ", bootstyle=WARNING)
-        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
+        right_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=10, pady=10)
 
-        # 模型列表（关键修改部分）
+        # 模型树形列表
         self.model_tree = ttk.Treeview(
             right_frame,
             columns=("materials", "quantity", "total", "unit"),
@@ -85,44 +154,31 @@ class App(ttk.Window):
             style="Custom.Treeview"
         )
 
-        # 配置自定义样式
+        # 配置样式
         style = ttk.Style()
         style.configure("Custom.Treeview", font=('Microsoft YaHei', 10), rowheight=28)
         style.configure("Custom.Treeview.Heading", font=('Microsoft YaHei', 10, 'bold'))
-        style.map("Custom.Treeview", background=[("selected", "#e0f0ff")])
 
-        # +++ 新增编辑对话框控件的样式 +++
-        style.configure("Edit.TEntry", padding=5)  # 输入框内边距
-        style.configure("Edit.TCombobox", padding=3)  # 下拉框内边距
-        # ++++++++++++++++++++++++++++++++
-
-        # 配置列（新增unit列）
-        columns = [
+        # 配置列
+        model_columns = [
             ("#0", "模型名称", 250, W),
             ("materials", "使用耗材", 150, W),
             ("quantity", "数量", 50, CENTER),
             ("total", "总成本(元)", 120, CENTER),
             ("unit", "单价(元)", 120, CENTER)
         ]
-        for col_id, text, width, anchor in columns:
+        for col_id, text, width, anchor in model_columns:
             self.model_tree.heading(col_id, text=text, anchor=anchor)
             self.model_tree.column(col_id, width=width, anchor=anchor)
 
-        # 配置层级样式
-        self.model_tree.tag_configure("parent", font=('Microsoft YaHei', 10, 'bold'))
-        self.model_tree.tag_configure("child",
-                                      font=('Microsoft YaHei', 9),
-                                      background="#f8f8f8",
-                                      foreground="#666666")
-
         self.model_tree.pack(fill=BOTH, expand=True, padx=5, pady=5)
 
-        # 操作按钮（添加编辑按钮）
+        # 模型操作按钮
         btn_frame = ttk.Frame(right_frame)
         btn_frame.pack(fill=X, pady=5)
         ttk.Button(btn_frame, text="添加模型", command=self.show_add_model,
                    bootstyle=SUCCESS).pack(side=LEFT, expand=True, padx=2)
-        ttk.Button(btn_frame, text="编辑模型", command=self.show_edit_model,  # 新增
+        ttk.Button(btn_frame, text="编辑模型", command=self.show_edit_model,
                    bootstyle=WARNING).pack(side=LEFT, expand=True, padx=2)
         ttk.Button(btn_frame, text="删除模型", command=self.delete_model,
                    bootstyle=DANGER).pack(side=LEFT, expand=True, padx=2)
@@ -427,6 +483,16 @@ class App(ttk.Window):
         else:
             messagebox.showwarning("提示", "请先选择要删除的模型！")
 
+    def refresh_print_history(self):
+        """刷新打印历史记录"""
+        self.history_tree.delete(*self.history_tree.get_children())
+        for entry in self.print_history_manager.history:
+            materials_str = ", ".join(
+                [f"{mat['filament']}({mat['weight']}g)" for mat in entry.used_materials]
+            )
+            time_str = entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            self.history_tree.insert("", END, values=(entry.model_name, materials_str, time_str))
+
     def use_model(self):
         """执行打印操作（支持多耗材）"""
         if not (selected := self.model_tree.selection()):
@@ -436,28 +502,41 @@ class App(ttk.Window):
         model_name = self.model_tree.item(selected[0], "text")
         model = self.model_manager.find_model(model_name)
 
-        # 检查所有耗材是否足够
+        # 检查耗材是否足够
         required = {}
         for material in model.materials:
             filament = self.filament_manager.find_filament(material["filament"])
+            needed = material["weight"] * model.quantity
+
             if not filament:
                 messagebox.showerror("错误", f"耗材 {material['filament']} 不存在！")
                 return
-
-            needed = material["weight"] * model.quantity
             if filament.remaining < needed:
                 messagebox.showerror("错误",
                                      f"{material['filament']} 需要 {needed}g\n当前剩余: {filament.remaining}g")
                 return
 
-            required[filament] = needed  # 存储需要扣除的量
+            required[filament] = needed
 
-        # 执行扣除
+        # 扣除耗材并保存
         for filament, amount in required.items():
             filament.remaining -= amount
-
         self.filament_manager.save_data()
+
+        # 添加历史记录
+        used_materials = [
+            {
+                "filament": mat["filament"],
+                "weight": mat["weight"] * model.quantity
+            } for mat in model.materials
+        ]
+        self.print_history_manager.add_entry(
+            PrintHistoryEntry(model.name, used_materials, datetime.now())
+        )
+
+        # 刷新界面
         self.refresh_filaments()
+        self.refresh_print_history()
 
         # 生成报告
         report = "\n".join([f"{k.name}: 使用 {v}g" for k, v in required.items()])
