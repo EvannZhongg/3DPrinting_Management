@@ -400,34 +400,6 @@ class App(ttk.Window):
 
         ttk.Button(dialog, text="提交", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
 
-    # def batch_calculate(self):
-    #     """批量计算选中模型"""
-    #     selected = self.model_tree.selection()
-    #     if not selected:
-    #         messagebox.showwarning("提示", "请先选择要计算的模型")
-    #         return
-    #
-    #     total_cost = 0
-    #     details = []
-    #
-    #     for item in selected:
-    #         model_name = self.model_tree.item(item, "text")
-    #         model = self.model_manager.find_model(model_name)
-    #
-    #         for material in model.materials:
-    #             filament = self.filament_manager.find_filament(material["filament"])
-    #             if not filament:
-    #                 continue
-    #
-    #             cost = filament.price * material["weight"] * model.quantity
-    #             total_cost += cost
-    #             details.append(
-    #                 f"{model.name}: {material['filament']} "
-    #                 f"{material['weight']}g × {model.quantity}个 = {cost:.2f}元"
-    #             )
-    #
-    #     report = "\n".join(details) + f"\n\n总计成本: {total_cost:.2f}元"
-    #     messagebox.showinfo("批量计算结果", report)
     # ------------------ 操作功能 ------------------
     def delete_filament(self):
         """删除选中耗材"""
