@@ -138,13 +138,13 @@ class App(ttk.Window):
             height=10
         )
         history_columns = [
-            ("model", "模型名称", 150),
-            ("materials", "使用耗材", 250),
-            ("time", "时间", 150)
+            ("model", "模型名称", 150, W),  # Add anchor for left alignment
+            ("materials", "使用耗材", 250, W),  # Add anchor for left alignment
+            ("time", "时间", 150, CENTER)  # Add anchor for center alignment
         ]
-        for col_id, text, width in history_columns:
-            self.history_tree.heading(col_id, text=text)
-            self.history_tree.column(col_id, width=width)
+        for col_id, text, width, anchor in history_columns:
+            self.history_tree.heading(col_id, text=text, anchor=anchor)
+            self.history_tree.column(col_id, width=width, anchor=anchor)
         self.history_tree.pack(fill=BOTH, expand=True)
 
         def on_right_click(event):
