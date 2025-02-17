@@ -529,8 +529,10 @@ class App(ttk.Window):
 
     def refresh_print_history(self):
         """刷新打印历史记录"""
-        self.history_tree.delete(*self.history_tree.get_children())
-        for entry in self.print_history_manager.history:
+        self.history_tree.delete(*self.history_tree.get_children())  # Clear existing entries
+
+        # Reverse the order of the history list to show the latest entry first
+        for entry in reversed(self.print_history_manager.history):
             materials_str = ", ".join(
                 [f"{mat['filament']}({mat['weight']}g)" for mat in entry.used_materials]
             )
