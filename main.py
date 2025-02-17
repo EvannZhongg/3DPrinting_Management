@@ -70,14 +70,18 @@ class App(ttk.Window):
 
     def refresh_filaments(self):
         """刷新耗材列表"""
-        self.filament_tree.delete(*self.filament_tree.get_children())
-        for f in self.filament_manager.filaments:
+        self.filament_tree.delete(*self.filament_tree.get_children())  # Clear existing entries
+
+        # Sort filaments by remaining amount in descending order
+        sorted_filaments = sorted(self.filament_manager.filaments, key=lambda f: f.remaining, reverse=True)
+
+        for f in sorted_filaments:
             # 四舍五入到小数点后两位显示
             total_price = round(f.total_price, 2)
             price_per_g = round(f.price, 4)  # 确保每克的价格四舍五入到小数点后 4 位
             remaining = round(f.remaining, 2)
 
-            # 四舍五入
+            # 插入排序后的耗材
             self.filament_tree.insert("", END, text=f.name, values=(
                 f.category,
                 f"{total_price:.2f}",
