@@ -72,12 +72,18 @@ class App(ttk.Window):
         """刷新耗材列表"""
         self.filament_tree.delete(*self.filament_tree.get_children())
         for f in self.filament_manager.filaments:
+            # 四舍五入到小数点后两位显示
+            total_price = round(f.total_price, 2)
+            price_per_g = round(f.price, 4)  # 确保每克的价格四舍五入到小数点后 4 位
+            remaining = round(f.remaining, 2)
+
+            # 四舍五入
             self.filament_tree.insert("", END, text=f.name, values=(
                 f.category,
-                f"{f.total_price:.2f}",
-                f"{f.price:.4f}",
+                f"{total_price:.2f}",
+                f"{price_per_g:.4f}",
                 f.initial_amount,
-                f.remaining
+                f"{remaining:.2f}"
             ))
 
     def create_widgets(self):
@@ -494,34 +500,6 @@ class App(ttk.Window):
 
         ttk.Button(dialog, text="提交", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
 
-    # def batch_calculate(self):
-    #     """批量计算选中模型"""
-    #     selected = self.model_tree.selection()
-    #     if not selected:
-    #         messagebox.showwarning("提示", "请先选择要计算的模型")
-    #         return
-    #
-    #     total_cost = 0
-    #     details = []
-    #
-    #     for item in selected:
-    #         model_name = self.model_tree.item(item, "text")
-    #         model = self.model_manager.find_model(model_name)
-    #
-    #         for material in model.materials:
-    #             filament = self.filament_manager.find_filament(material["filament"])
-    #             if not filament:
-    #                 continue
-    #
-    #             cost = filament.price * material["weight"] * model.quantity
-    #             total_cost += cost
-    #             details.append(
-    #                 f"{model.name}: {material['filament']} "
-    #                 f"{material['weight']}g × {model.quantity}个 = {cost:.2f}元"
-    #             )
-    #
-    #     report = "\n".join(details) + f"\n\n总计成本: {total_cost:.2f}元"
-    #     messagebox.showinfo("批量计算结果", report)
     # ------------------ 操作功能 ------------------
     def delete_filament(self):
         """删除选中耗材"""
