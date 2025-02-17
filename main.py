@@ -52,7 +52,7 @@ class PrintHistoryManager:
 class App(ttk.Window):
     def __init__(self):
         super().__init__(themename="minty")
-        self.title("3D打印耗材管理系统 v3.0")
+        self.title("3D打印耗材管理系统")
         self.geometry("1500x780")
 
         # 初始化数据管理
@@ -343,7 +343,7 @@ class App(ttk.Window):
         category_var = ttk.StringVar(value=filament.category)
         price_var = ttk.DoubleVar(value=filament.total_price)
         initial_var = ttk.DoubleVar(value=filament.initial_amount)
-        remaining_var = ttk.DoubleVar(value=filament.remaining)
+        remaining_var = ttk.DoubleVar(value=filament.remaining)  # Ensure remaining is a float
 
         # 输入字段配置
         fields = [
@@ -382,9 +382,11 @@ class App(ttk.Window):
                 if new_remaining < 0:
                     raise ValueError("剩余量不能为负数")
 
+                # 保持小数点后两位
+                new_remaining = round(new_remaining, 2)  # Round remaining value to 2 decimal places
+
                 # 转换为整数（支持小数输入）
-                new_initial = int(round(new_initial))
-                new_remaining = int(round(new_remaining))
+                new_initial = int(round(new_initial))  # Remaining logic unchanged
 
                 # 自动调整剩余量逻辑
                 if filament.initial_amount > 0 and new_initial != filament.initial_amount:
@@ -400,7 +402,7 @@ class App(ttk.Window):
                 filament.category = new_category
                 filament.total_price = new_price
                 filament.initial_amount = new_initial
-                filament.remaining = min(new_remaining, new_initial)  # 确保不超过总量
+                filament.remaining = new_remaining  # Save the remaining with decimal
 
                 self.filament_manager.save_data()
                 self.refresh_filaments()
@@ -492,6 +494,34 @@ class App(ttk.Window):
 
         ttk.Button(dialog, text="提交", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
 
+    # def batch_calculate(self):
+    #     """批量计算选中模型"""
+    #     selected = self.model_tree.selection()
+    #     if not selected:
+    #         messagebox.showwarning("提示", "请先选择要计算的模型")
+    #         return
+    #
+    #     total_cost = 0
+    #     details = []
+    #
+    #     for item in selected:
+    #         model_name = self.model_tree.item(item, "text")
+    #         model = self.model_manager.find_model(model_name)
+    #
+    #         for material in model.materials:
+    #             filament = self.filament_manager.find_filament(material["filament"])
+    #             if not filament:
+    #                 continue
+    #
+    #             cost = filament.price * material["weight"] * model.quantity
+    #             total_cost += cost
+    #             details.append(
+    #                 f"{model.name}: {material['filament']} "
+    #                 f"{material['weight']}g × {model.quantity}个 = {cost:.2f}元"
+    #             )
+    #
+    #     report = "\n".join(details) + f"\n\n总计成本: {total_cost:.2f}元"
+    #     messagebox.showinfo("批量计算结果", report)
     # ------------------ 操作功能 ------------------
     def delete_filament(self):
         """删除选中耗材"""
