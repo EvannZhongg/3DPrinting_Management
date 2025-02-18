@@ -132,7 +132,8 @@ class App(ttk.Window):
                    bootstyle=DANGER).pack(side=LEFT, expand=True, padx=2)
 
         # 打印历史面板
-        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=SUCCESS)
+        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=INFO)
+        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=DANGER)
         history_frame.pack(side=TOP, fill=BOTH, expand=True)
 
         # 历史记录列表
@@ -235,19 +236,20 @@ class App(ttk.Window):
                    bootstyle=INFO).pack(side=LEFT, expand=True, padx=2)
 
     def toggle_selection(self, event):
-        """切换选中状态，点击已选中的行时取消选择"""
+        """切换选中状态，点击非展开区域时切换选择"""
         widget = event.widget
-        item = widget.identify_row(event.y)
+        x, y = event.x, event.y
 
+        # 判断点击的是否是展开按钮区域
+        if widget.identify_region(x, y) == "tree":
+            return  # 交给默认行为处理展开/折叠
+
+        item = widget.identify_row(y)
         if item:
-            # 获取当前选中项
             current_selection = widget.selection()
-
             if item in current_selection:
-                # 如果点击的是已选中的行，取消选择
                 widget.selection_remove(item)
             else:
-                # 否则清除原有选择并选中新行
                 widget.selection_set(item)
         return "break"  # 阻止默认选择行为
 
