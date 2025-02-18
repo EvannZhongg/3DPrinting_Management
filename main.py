@@ -132,7 +132,7 @@ class App(ttk.Window):
                    bootstyle=DANGER).pack(side=LEFT, expand=True, padx=2)
 
         # 打印历史面板
-        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=INFO)
+        history_frame = ttk.Labelframe(left_container, text=" 打印历史 ", bootstyle=SUCCESS)
         history_frame.pack(side=TOP, fill=BOTH, expand=True)
 
         # 历史记录列表
