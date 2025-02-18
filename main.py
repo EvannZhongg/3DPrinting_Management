@@ -107,6 +107,7 @@ class App(ttk.Window):
             show="tree headings",
             height=8
         )
+        self.filament_tree.bind("<Button-1>", self.toggle_selection)
         columns = [
             ("#0", "耗材名称", 190, W),
             ("category", "种类", 80, W),
@@ -141,6 +142,8 @@ class App(ttk.Window):
             show="headings",
             height=10
         )
+        self.history_tree.bind("<Button-1>", self.toggle_selection)
+
         history_columns = [
             ("model", "模型名称", 150, W),  # Add anchor for left alignment
             ("materials", "使用耗材", 250, W),  # Add anchor for left alignment
@@ -199,7 +202,7 @@ class App(ttk.Window):
             height=15,
             style="Custom.Treeview"
         )
-
+        self.model_tree.bind("<Button-1>", self.toggle_selection)
         # 配置样式
         style = ttk.Style()
         style.configure("Custom.Treeview", font=('Microsoft YaHei', 10), rowheight=28)
@@ -230,6 +233,23 @@ class App(ttk.Window):
                    bootstyle=DANGER).pack(side=LEFT, expand=True, padx=2)
         ttk.Button(btn_frame, text="执行打印", command=self.use_model,
                    bootstyle=INFO).pack(side=LEFT, expand=True, padx=2)
+
+    def toggle_selection(self, event):
+        """切换选中状态，点击已选中的行时取消选择"""
+        widget = event.widget
+        item = widget.identify_row(event.y)
+
+        if item:
+            # 获取当前选中项
+            current_selection = widget.selection()
+
+            if item in current_selection:
+                # 如果点击的是已选中的行，取消选择
+                widget.selection_remove(item)
+            else:
+                # 否则清除原有选择并选中新行
+                widget.selection_set(item)
+        return "break"  # 阻止默认选择行为
 
     def refresh_models(self):
         """刷新模型列表（支持多耗材展开显示）"""
