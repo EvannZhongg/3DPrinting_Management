@@ -578,7 +578,7 @@ class App(ttk.Window):
         required = {}
         for material in model.materials:
             filament = self.filament_manager.find_filament(material["filament"])
-            needed = material["weight"] * model.quantity
+            needed = material["weight"] * model.quantity  # 每个耗材的总需求量
 
             if not filament:
                 messagebox.showerror("错误", f"耗材 {material['filament']} 不存在！")
@@ -588,7 +588,9 @@ class App(ttk.Window):
                                      f"{material['filament']} 需要 {needed}g\n当前剩余: {filament.remaining}g")
                 return
 
-            required[filament] = needed
+            if filament not in required:
+                required[filament] = 0
+            required[filament] += needed  # 累加相同耗材的需求量
 
         # 扣除耗材并保存
         for filament, amount in required.items():
