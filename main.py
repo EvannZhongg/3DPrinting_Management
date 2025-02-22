@@ -578,7 +578,7 @@ class App(ttk.Window):
         required = {}
         for material in model.materials:
             filament = self.filament_manager.find_filament(material["filament"])
-            needed = material["weight"] * model.quantity  # 每个耗材的总需求量
+            needed = material["weight"]  # 每个耗材的总需求量
 
             if not filament:
                 messagebox.showerror("错误", f"耗材 {material['filament']} 不存在！")
@@ -601,7 +601,7 @@ class App(ttk.Window):
         used_materials = [
             {
                 "filament": mat["filament"],
-                "weight": mat["weight"] * model.quantity
+                "weight": mat["weight"]  # 使用的是单个耗材的重量
             } for mat in model.materials
         ]
         self.print_history_manager.add_entry(
@@ -619,20 +619,20 @@ class App(ttk.Window):
 
     def show_edit_model(self):
         """显示编辑模型对话框"""
-        selected = self.model_tree.selection()  # Get the selected item
-        if not selected:  # Check if a model is selected
+        selected = self.model_tree.selection()  # 获取选中的模型
+        if not selected:  # 检查是否有选中模型
             messagebox.showwarning("提示", "请先选择要编辑的模型！")
             return
 
         model_name = self.model_tree.item(selected[0], "text")
-        model = self.model_manager.find_model(model_name)  # Find the model using the name
+        model = self.model_manager.find_model(model_name)  # 根据模型名称查找模型
 
-        if not model:  # Check if the model was found
+        if not model:  # 如果找不到模型
             messagebox.showerror("错误", "所选模型不存在！")
             return
 
         dialog = ttk.Toplevel(title=f"编辑模型 - {model_name}")
-        dialog.geometry("600x300")  # Adjusted size for better layout
+        dialog.geometry("600x300")  # 调整对话框大小
 
         # 用于添加耗材行的区域 (将添加的耗材行放在这里)
         material_frame = ttk.Frame(dialog)
@@ -673,20 +673,22 @@ class App(ttk.Window):
         main_frame.pack(fill=X, pady=5)
         ttk.Label(main_frame, text="模型名称:").pack(side=LEFT)
         name_entry = ttk.Entry(main_frame)
-        name_entry.insert(0, model.name)  # Set the model's name in the entry field
+        name_entry.insert(0, model.name)  # 设置模型名称
         name_entry.pack(side=LEFT, fill=X, expand=True)
 
         ttk.Label(main_frame, text="单盘数量:").pack(side=LEFT, padx=10)
         quantity_entry = ttk.Entry(main_frame, width=8)
-        quantity_entry.insert(0, str(model.quantity))  # Set the model's quantity in the entry field
+        quantity_entry.insert(0, str(model.quantity))  # 设置模型数量
         quantity_entry.pack(side=LEFT)
 
         def on_submit():
             try:
                 # 收集所有耗材数据
                 material_list = []
+                total_cost = 0  # 总成本初始化
+                total_weight = 0  # 总重量初始化
+
                 for row in material_frame.winfo_children():
-                    # 获取每一行的耗材和重量
                     combo = row.winfo_children()[0]  # Combobox for filament
                     entry = row.winfo_children()[1]  # Entry for weight
                     filament_name = combo.get()
@@ -700,20 +702,30 @@ class App(ttk.Window):
                         "weight": round(weight, 2)
                     })
 
+                    # 计算每个耗材的成本
+                    filament = self.filament_manager.find_filament(filament_name)
+                    if filament:
+                        material_cost = filament.price * weight
+                        total_cost += material_cost
+                        total_weight += weight
+
                 # 更新模型
                 model.name = name_entry.get()
                 model.quantity = int(quantity_entry.get())
                 model.materials = material_list
 
+                # 更新模型的总成本和单价
+                model_unit_cost = total_cost / model.quantity if model.quantity > 0 else 0
+
                 self.model_manager.save_data()
                 self.refresh_models()
                 dialog.destroy()
-                messagebox.showinfo("成功", "模型信息已更新！")
+                messagebox.showinfo("成功",
+                                    f"模型信息已更新！\n新总价: {total_cost:.2f}元, 单价: {model_unit_cost:.2f}元")
             except Exception as e:
                 messagebox.showerror("错误", f"输入无效: {str(e)}")
 
         ttk.Button(dialog, text="保存修改", command=on_submit, bootstyle=SUCCESS).pack(pady=10)
-
 
 if __name__ == "__main__":
     app = App()
